@@ -1,0 +1,33 @@
+name: 기능 요청
+description: 새 기능 또는 개선 사항 제안
+labels: ["enhancement"]
+
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 배경
+      description: 어떤 문제 또는 필요가 있나요?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: 제안하는 해결책
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: 영역
+      options:
+        - UI/UX
+        - AI 챗
+        - 포트폴리오 페이지
+        - 성능
+        - CI/CD
+        - 기타
+    validations:
+      required: true

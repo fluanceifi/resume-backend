@@ -1,0 +1,40 @@
+name: 버그 리포트
+description: 버그를 발견했을 때 사용
+labels: ["bug"]
+
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: 버그 내용
+      description: 어떤 문제가 발생했나요?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 재현 방법
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 기대 동작
+    validations:
+      required: true
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: 환경
+      options:
+        - 브라우저 (Desktop)
+        - 브라우저 (Mobile)
+        - 인쇄 미리보기
+    validations:
+      required: true
