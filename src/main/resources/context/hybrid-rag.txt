@@ -1,0 +1,33 @@
+프로젝트명: Hybrid RAG Portfolio
+설명: 토스페이먼츠 API 실문서 대상 Elasticsearch 기반 RAG 검색 품질 개선 프로젝트
+기술스택: FastAPI, Elasticsearch, OpenAI Embedding(text-embedding-3-small/large), Docker Compose, Lucene Analyzer, BM25, kNN(HNSW), Weighted RRF
+
+핵심 성과:
+- BM25 query 전략 개선: Top-1 정확도 35% → 95% (title^3 + content multi_match 적용)
+- RRF section_key dedup 적용: 45% → 100% (동일 조건 7:3 가중치)
+- small 모델에서도 가중치 최적화(85:15)로 100% 달성
+
+Baseline 분리 운영:
+- Track A (BM25 Query Strategy): 35% → 95%. 본문만 검색하던 것을 제목+본문 검색으로 변경, 제목 가중치 3배 적용.
+- Track B (Hybrid RRF Stability): 45% → 100%. RRF 병합 전 section_key 기준 dedup 적용으로 동일 섹션 청크 점수 과누적 문제 해결.
+
+아키텍처:
+- Lexical Retrieval: Elasticsearch + Nori + synonym_graph + BM25 + title/content boost
+- Semantic Retrieval: dense_vector kNN (HNSW 기반 ANN)
+- Fusion: Weighted RRF로 BM25/kNN 비중 조정
+
+트러블슈팅:
+1. #fragment 중복 수집 문제: URL fragment가 서버에 전달되지 않아 같은 페이지가 섹션 수만큼 반복 수집됨. fetch 단계 fragment 제거 dedup + 문서 해시 기반 중복 제거 + 섹션 단위 재분할로 해결.
+2. RRF dedup 미적용 시 동일 섹션 점수 과누적: 한 섹션이 여러 청크로 쪼개져 BM25/kNN 양쪽에서 점수가 청크 수만큼 누적. section_key 기준 dedup_by_doc_key()로 첫 청크만 남겨 해결.
+3. 가중치 과적용 문제: small 모델에서 85:15는 100%였지만 9:1은 95%로 후퇴. 도메인별 질의 분포에 맞춘 최적점 탐색 필요.
+
+실험 결과 요약:
+- BM25 Baseline (match content): 35%
+- BM25 Tuned (multi_match + boost): 95%
+- Hybrid Baseline (large, 7:3, dedup off): 45%
+- Hybrid Stabilized (large, 7:3, dedup on): 100%
+- Small Model Tuned (small, 85:15, dedup on): 100%
+- Small Model Overweight (small, 9:1, dedup on): 95%
+- Large Model 7:3 (large, 7:3, dedup on): 100%
+
+GitHub: https://github.com/fluanceifi/hybrid-search-rag

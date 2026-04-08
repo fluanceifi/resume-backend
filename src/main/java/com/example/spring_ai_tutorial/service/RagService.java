@@ -78,21 +78,13 @@ public class RagService {
             return noResultAnswer;
         }
 
-        // 단일 패스로 컨텍스트 문자열과 출처 목록을 동시에 구성
+        // 컨텍스트 문자열 구성
         StringBuilder contextBuf = new StringBuilder();
-        StringBuilder sourceBuf  = new StringBuilder();
-        boolean hasSource = false;
         for (int i = 0; i < relevantDocs.size(); i++) {
             DocumentSearchResultDto doc = relevantDocs.get(i);
             int num = i + 1;
             if (i > 0) contextBuf.append("\n\n");
             contextBuf.append("[").append(num).append("] ").append(doc.getContent());
-
-            String filename = (String) doc.getMetadata().getOrDefault("originalFilename", "");
-            if (!filename.isBlank()) {
-                sourceBuf.append("[").append(num).append("] ").append(filename).append("\n");
-                hasSource = true;
-            }
         }
 
         String systemPrompt = """
@@ -110,14 +102,10 @@ public class RagService {
                     ? response.getResult().getOutput().getText()
                     : "응답을 생성할 수 없습니다.";
 
-            String finalAnswer = hasSource
-                    ? aiAnswer + "\n\n참고 문서:\n" + sourceBuf
-                    : aiAnswer;
-
             // MySQL에 질문/답변 이력 저장
-            chatQueryService.save(question, finalAnswer);
+            chatQueryService.save(question, aiAnswer);
 
-            return finalAnswer;
+            return aiAnswer;
         } catch (Exception e) {
             log.error("AI 모델 호출 중 오류 발생: {}", e.getMessage(), e);
             String fallbackAnswer = "AI 모델 호출 중 오류가 발생했습니다. 검색 결과만 제공합니다:\n\n" +

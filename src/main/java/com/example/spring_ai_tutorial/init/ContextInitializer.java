@@ -27,10 +27,14 @@ import java.util.Map;
 @Component
 public class ContextInitializer implements ApplicationRunner {
 
-    private static final String SETTING_KEY_INDEXED  = "about-me-indexed";
-    private static final String SETTING_KEY_CHUNK_IDS = "about-me-chunk-ids";
-    private static final String CONTEXT_SOURCE        = "about-me";
-    private static final String ABOUT_ME_PATH         = "context/about-me.txt";
+    private record ContextDoc(String settingKeyIndexed, String settingKeyChunkIds,
+                                 String source, String path) {}
+
+    private static final List<ContextDoc> CONTEXT_DOCS = List.of(
+            new ContextDoc("about-me-indexed", "about-me-chunk-ids", "about-me", "context/about-me.txt"),
+            new ContextDoc("hybrid-rag-indexed", "hybrid-rag-chunk-ids", "hybrid-rag", "context/hybrid-rag.txt"),
+            new ContextDoc("smu-club-indexed", "smu-club-chunk-ids", "smu-club", "context/smu-club.txt")
+    );
 
     private final ElasticsearchDocumentVectorStore vectorStore;
     private final AppSettingRepository appSettingRepository;
@@ -43,51 +47,54 @@ public class ContextInitializer implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        // "skip" 값이면 초기화 건너뜀 (운영 중 불필요한 재인덱싱 방지 용도)
-        var indexedSetting = appSettingRepository.findById(SETTING_KEY_INDEXED);
+        for (ContextDoc doc : CONTEXT_DOCS) {
+            indexDocument(doc);
+        }
+    }
+
+    private void indexDocument(ContextDoc doc) {
+        var indexedSetting = appSettingRepository.findById(doc.settingKeyIndexed());
         if (indexedSetting.isPresent() && "skip".equals(indexedSetting.get().getValue())) {
-            log.info("about-me 인덱싱 건너뜀 (설정: skip)");
+            log.info("{} 인덱싱 건너뜀 (설정: skip)", doc.source());
             return;
         }
 
-        log.info("about-me.txt 인덱싱 시작...");
+        log.info("{} 인덱싱 시작...", doc.path());
 
         // 기존 청크 삭제
-        appSettingRepository.findById(SETTING_KEY_CHUNK_IDS).ifPresent(s -> {
+        appSettingRepository.findById(doc.settingKeyChunkIds()).ifPresent(s -> {
             String raw = s.getValue();
             if (raw != null && !raw.isBlank()) {
                 List<String> oldIds = Arrays.asList(raw.split(","));
-                log.debug("기존 about-me 청크 삭제 - {} 개", oldIds.size());
+                log.debug("기존 {} 청크 삭제 - {} 개", doc.source(), oldIds.size());
                 vectorStore.deleteByIds(oldIds);
             }
         });
 
-        // about-me.txt 로드
+        // 텍스트 로드
         String text;
         try {
-            ClassPathResource resource = new ClassPathResource(ABOUT_ME_PATH);
+            ClassPathResource resource = new ClassPathResource(doc.path());
             text = resource.getContentAsString(StandardCharsets.UTF_8);
         } catch (Exception e) {
-            log.error("about-me.txt 로드 실패: {}", e.getMessage());
+            log.error("{} 로드 실패: {}", doc.path(), e.getMessage());
             return;
         }
 
         // ES 인덱싱
         Map<String, Object> metadata = new HashMap<>();
-        metadata.put("source", CONTEXT_SOURCE);
-        metadata.put("originalFilename", "about-me.txt");
+        metadata.put("source", doc.source());
+        metadata.put("originalFilename", doc.path().substring(doc.path().lastIndexOf('/') + 1));
 
         try {
-            List<String> chunkIds = vectorStore.addText("about-me-context", text, metadata);
-            log.info("about-me.txt 인덱싱 완료 - 청크 수: {}", chunkIds.size());
+            List<String> chunkIds = vectorStore.addText(doc.source() + "-context", text, metadata);
+            log.info("{} 인덱싱 완료 - 청크 수: {}", doc.path(), chunkIds.size());
 
-            // MySQL에 청크 ID 저장
             String chunkIdsValue = String.join(",", chunkIds);
-            appSettingRepository.save(new AppSetting(SETTING_KEY_CHUNK_IDS, chunkIdsValue));
-            appSettingRepository.save(new AppSetting(SETTING_KEY_INDEXED, "true"));
+            appSettingRepository.save(new AppSetting(doc.settingKeyChunkIds(), chunkIdsValue));
+            appSettingRepository.save(new AppSetting(doc.settingKeyIndexed(), "true"));
         } catch (Exception e) {
-            // 외부 AI API(쿼터/네트워크) 이슈로 초기 인덱싱 실패 시에도 서버는 기동되도록 한다.
-            log.warn("about-me 초기 인덱싱 실패(서버 기동은 계속): {}", e.getMessage());
+            log.warn("{} 초기 인덱싱 실패(서버 기동은 계속): {}", doc.source(), e.getMessage());
         }
     }
 }

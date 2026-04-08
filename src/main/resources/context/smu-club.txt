@@ -1,0 +1,41 @@
+프로젝트명: SMU-CLUB
+설명: 상명대학교 동아리 탐색, 지원, 운영 관리 플랫폼. 운영 안정성 개선, 배치 처리 구조 재설계, 이메일 비동기 처리 성능 개선 중심.
+기술스택: React + Vite, Spring Boot, JPA, MySQL, Nginx, Docker Compose, OCI Object Storage, Discord Webhook, Scheduler, JavaMailSender, @Async
+
+핵심 개선 사항:
+- 스케줄러 실패 시 Discord Webhook 즉시 알림 체계 구축
+- 배치 트랜잭션 범위 재설계로 실패 전파 범위 축소
+- 이메일 비동기 처리: 동기 93.8초(1.07건/초) → 비동기 23.0초(4.34건/초), 처리시간 75.4% 단축, 처리량 4.1배 향상
+- JPA LEFT JOIN FETCH로 이미지 없는 동아리 조회 누락 해결
+- API 응답 포맷 표준화(ApiResponseDto<T>)로 프론트엔드 협업 비용 절감
+
+문제 해결 사례:
+
+1. 스케줄러 장애 감지 문제
+- 문제: 스케줄러 실패가 로그에만 남아 운영자가 사후적으로 인지
+- 해결: @DiscordAlert 커스텀 어노테이션 + AOP @AfterThrowing으로 예외 감지 → DiscordAlertService → Discord Webhook 전송. 알림은 @Async로 메인 흐름 차단 방지.
+
+2. 단일 트랜잭션 배치 실패 전파
+- 문제: 하나의 큰 트랜잭션으로 배치 처리 시 일부 실패가 전체 롤백으로 이어짐. Lock 30초 점유.
+- 해결: 모집 자동 마감은 BATCH_SIZE=10 청크 분할 + REQUIRES_NEW 트랜잭션. 이메일 재전송은 건별 독립 트랜잭션. Lock 3초씩 10번으로 분산.
+
+3. 이메일 대량 발송 서버 블로킹
+- 문제: 100명에게 동기 발송 시 100초 블로킹 → 504 Gateway Timeout
+- 검토한 대안: BCC(개인화 불가, 수신자 제한), Resend API(FreeTier 100건 한도, 유료 전환 필요)
+- 해결: @Async + ThreadPoolTaskExecutor (corePoolSize=5, maxPoolSize=10, queueCapacity=100). 메인 스레드 즉시 응답, 워커 스레드가 병렬 처리.
+- 결과: 처리시간 75.4% 단축, 처리량 4.1배 향상
+
+4. JPA Fetch Join 조회 누락
+- 문제: JOIN FETCH 사용 시 연관 이미지가 없는 동아리가 조회 결과에서 누락
+- 해결: LEFT JOIN FETCH로 변경. 이미지 없어도 부모 엔티티 조회 보장.
+
+5. API 응답 형식 불일치
+- 문제: API마다 응답 구조가 달라 프론트엔드에 방어 코드 증가
+- 해결: ApiResponseDto<T>로 status, message, data, errorCode 통일
+
+운영 관점 의사결정:
+- 외부 인증 의존 구조의 리스크 검토 후, 운영진 로그인 + 일반 지원자 비로그인 구조로 전환 방향 정리
+- 메일 발송 방식을 BCC, Resend API, @Async 세 가지 검토 후 비동기 스레드풀 방식 선택 (개인화 필요 + 비용 제약)
+
+GitHub: https://github.com/smu-human/smu-club
+기술 블로그: https://fluanceifi.tistory.com/40, https://fluanceifi.tistory.com/42
