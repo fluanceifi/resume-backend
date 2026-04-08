@@ -1,0 +1,147 @@
+## 기본 정보
+
+이름: 유승준 (Yoo Seungjun)
+직무: 백엔드 개발자 (Backend Developer)
+이메일: gksrnr66@gmail.com
+전화: 010-4130-1904
+GitHub: https://github.com/fluanceifi
+LinkedIn: https://www.linkedin.com/in/sjy-511661289/
+포트폴리오: https://fluanceifi.github.io
+
+
+## 자기소개
+
+유승준은 안정적인 서버 구조와 명확한 로직 설계를 추구하는 백엔드 개발자입니다.
+단순히 기능을 구현하는 데 그치지 않고, 유지보수하기 쉬운 코드와 신뢰할 수 있는 서비스를 만들기 위해 꾸준히 경험을 쌓아가고 있습니다.
+새로운 기술을 배우는 과정 자체를 즐기며, 작은 기능이라도 왜 그렇게 동작하는지 끝까지 이해하려 노력합니다.
+협업에서는 읽기 쉬운 코드와 명확한 역할 분리를 중요하게 생각하고, 팀원과의 소통을 통해 더 나은 구조를 찾아가는 과정을 즐깁니다.
+
+희망 직무: 백엔드 개발자
+강점: 기능 구현에 그치지 않고 구조를 이해하며 개선하는 태도
+목표: 읽기 쉽고 유지보수하기 쉬운 서버를 만드는 개발자로 성장
+
+
+## 기술 스택
+
+언어 (Language): Java, Python
+
+백엔드 & 데이터베이스 (Backend & DB): Spring Boot, Spring MVC, Spring AI, JPA, Hibernate, MySQL, Redis
+
+인프라 (Infra): Docker, Docker Compose, Nginx, AWS, OCI (Oracle Cloud Infrastructure), GitHub Actions, CI/CD, Linux
+
+AI / RAG: LangChain, FastAPI, OpenAI API, Spring AI, OpenCV, 임베딩(Embedding), 벡터 스토어(Vector Store)
+
+검색 (Search): Elasticsearch, Lucene Analyzer, BM25, kNN(HNSW), Hybrid Search, Weighted RRF, 중복 제거(Dedup)
+
+빌드 & 문서화: Gradle, Maven, Swagger, OpenAPI
+
+
+## 학력
+
+1. 휴먼IT대학 AI공학부 (편입) — 4년제, 서울
+   기간: 2024년 3월 ~ 2026년 8월 (재학 중)
+   학점: 4.18 / 4.5 (전공 4.2)
+   과정: 주간
+
+2. 부천대학교 호텔외식조리학과 — 2년제, 경기
+   기간: 2018년 3월 ~ 2022년 2월
+   학점: 3.86 / 4.5
+   과정: 주간
+
+
+## 경험 및 활동
+
+1. 우리FIS아카데미 (Woori FIS Academy)
+   기간: 2025년 1월 30일 ~ 2026년 6월 25일
+   내용: 금융 IT 전문 교육 과정. Java, Spring Boot, JPA, MySQL, Docker, AWS 등 백엔드 개발 및 클라우드 기술 집중 학습.
+
+2. 엔디에스 클라우드 직무캠프 (NDS Cloud Job Camp)
+   기간: 2024년 8월
+   내용: 클라우드 인프라 및 DevOps 실습 중심 단기 교육 과정.
+
+
+## 프로젝트
+
+### 프로젝트 1: SMU-CLUB
+
+설명: 상명대학교 학생을 위한 동아리 탐색, 지원, 운영 관리 플랫폼.
+포트폴리오: https://fluanceifi.github.io/smu-club-portfolio/
+GitHub: https://github.com/smu-human/smu-club
+
+기술 스택: React + Vite, Spring Boot, JPA, MySQL, Docker Compose, Nginx, OCI Object Storage, Discord Webhook, Scheduler, AOP
+
+주요 개선 사항 및 문제 해결:
+
+1) 스케줄러 장애 감지 체계 개선
+   문제: 모집 자동 마감, 이메일 재전송, OCI 파일 정리 등 배치 작업이 실패해도 운영자가 즉시 인지하기 어려웠다.
+   해결: @DiscordAlert 커스텀 어노테이션과 DiscordAlertAspect(@AfterThrowing)를 도입해 스케줄러 예외 발생 시 Discord Webhook으로 즉시 알림을 전송하도록 구조를 개선했다. 알림 전송은 @Async로 처리해 메인 흐름 차단을 방지했다.
+   결과: 배치 장애를 외부 채널을 통해 실시간으로 감지할 수 있게 되었다.
+
+2) 배치 트랜잭션 범위 재설계
+   문제: 단일 트랜잭션으로 묶인 배치 작업에서 일부 실패가 전체 롤백으로 이어지고, 락 점유 시간이 길어지는 문제가 있었다.
+   해결: 모집 자동 마감은 BATCH_SIZE=10 단위 청크로 분할하고 closeRecruitments()를 REQUIRES_NEW 트랜잭션으로 처리. 이메일 재전송은 각 항목을 processSingleTask()에서 독립 트랜잭션으로 처리했다.
+   결과: 일부 실패가 전체 배치를 무효화하지 않고, 실패 지점 추적과 재처리가 단순해졌다.
+
+3) JPA Fetch Join 전략 개선
+   문제: 동아리 상세 조회 시 이미지가 없는 동아리가 Fetch Join으로 인해 결과에서 누락되었다.
+   해결: INNER JOIN FETCH를 LEFT JOIN FETCH로 변경해 연관 엔티티가 없어도 부모 엔티티가 반드시 조회되도록 수정했다.
+   결과: 이미지가 없는 동아리도 정상적으로 상세 조회가 가능해졌다.
+
+4) API 응답 포맷 표준화
+   문제: API마다 응답 구조가 달라 프론트엔드에 불필요한 방어 코드가 증가했다.
+   해결: ApiResponseDto<T>를 중심으로 응답 포맷을 통일했다. 공통 필드: status, message, data, errorCode.
+   결과: 프론트엔드 협업 비용이 줄고 응답 계약이 명확해졌다.
+
+
+### 프로젝트 2: Hybrid RAG Portfolio
+
+설명: 토스페이먼츠 API 실문서를 대상으로 Elasticsearch 기반 RAG 검색 품질을 개선한 프로젝트.
+포트폴리오: https://fluanceifi.github.io/Hybrid-RAG-Portfolio/
+GitHub: https://github.com/fluanceifi/hybrid-search-rag
+
+기술 스택: FastAPI, Elasticsearch, Lucene Analyzer, BM25, kNN(HNSW), Weighted RRF, text-embedding-3-small, text-embedding-3-large, Docker Compose, Python
+
+baseline 전략:
+- BM25 Track A: match content만 사용 → 35%, multi_match(title^3 + content)로 개선 → 95%
+- Hybrid Track B: RRF dedup 미적용 → 45%, section_key dedup 적용 → 100%
+
+주요 트러블슈팅:
+
+1) #fragment 중복 수집 문제
+   원인: API 문서의 각 섹션이 fragment 단위로 구분되지만 HTTP 요청 시 fragment가 서버에 전달되지 않아 동일 페이지가 중복 수집됨.
+   해결: URL 수집 시 fragment 제거 후 중복 필터링. 문서 본문 해시 기반 중복 제거. 섹션 분할 후 청킹 재구성.
+
+2) RRF dedup 미적용 시 동일 섹션 점수 과누적
+   원인: 한 섹션이 여러 청크로 분리되면 BM25/kNN 리스트에 각각 등장해 점수가 청크 수만큼 누적됨.
+   해결: RRF 계산 전 section_key 기준으로 dedup 적용(dedup_by_doc_key()). 7:3 동일 조건에서 45% → 100%.
+
+3) 가중치 과적용 문제
+   관찰: small 모델에서 85:15는 100%이나 9:1은 95%로 후퇴. 특정 신호를 과도하게 신뢰하면 다양한 질의 유형에 취약해짐.
+   결론: 도메인별 질의 분포에 맞춘 최적 가중치 탐색 필요.
+
+실험 결과 요약:
+- BM25 Baseline (match content): 35%
+- BM25 Tuned (multi_match + boost): 95%
+- Hybrid Baseline (large, 7:3, dedup off): 45%
+- Hybrid Stabilized (large, 7:3, dedup on): 100%
+- Small Model Tuned (small, 85:15, dedup on): 100%
+- Small Model Overweight (small, 9:1, dedup on): 95%
+- Large Model 7:3 (large, 7:3, dedup on): 100%
+
+
+### 프로젝트 3: Woori Card Scope
+
+설명: 카드 관련 데이터를 다루며 구현한 개인 프로젝트 저장소.
+GitHub: https://github.com/fluanceifi/woori_card_scope
+기술 스택: Spring Boot, MySQL, JPA
+
+
+## 연락처
+
+이메일: gksrnr66@gmail.com
+전화번호: 010-4130-1904
+GitHub: https://github.com/fluanceifi
+LinkedIn: https://www.linkedin.com/in/sjy-511661289/
+포트폴리오 사이트: https://fluanceifi.github.io
+
+
